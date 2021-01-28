@@ -1,0 +1,1 @@
+# Discord Bot for MakeWay Competition Website
