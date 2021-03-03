@@ -1,33 +1,40 @@
 # bot.py
+import aiohttp
 import os
 
-import discord
+from discord.ext import commands
 from dotenv import load_dotenv
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
-GUILD = os.getenv('DISCORD_GUILD')
 
-client = discord.Client()
+bot = commands.Bot(command_prefix='!')
 
 
-@client.event
+@bot.event
 async def on_ready():
-    guild = discord.utils.get(client.guilds, name=GUILD)
-
-    print(
-        f'{client.user} is connected to this guild:\n'
-        f'{guild.name}(id: {guild.id})'
-    )
+    print(f'{bot.user.name} is connected to Discord!')
 
 
-@client.event
-async def on_message(message):
-    if message.author == client.user:
-        return
+@bot.command(name='post', help='Creates a new post!')
+async def post(ctx, user_name: str, title: str, caption: str = None, ):
+    await ctx.send(f'received data: {user_name}, {title}, {caption}')
+    data = {
+        'creator': user_name,
+        'caption': caption,
+        'title': title
+        }
 
-    response = message.content + "\n\n that's what you sound like"
-    await message.channel.send(response)
+    async with aiohttp.ClientSession() as session:
+        await ctx.send('sending post...')
+        async with session.post('https://makeway.herokuapp.com/posts/',
+                                json=data) as r:
+            if r.status == 201:
+                print('got a 201 code!')
+                await ctx.send('posted successfully!!')
+            elif r.status == 409:
+                print('got a 409 code :(')
+                await ctx.send(f'failed :(\nerror message: {await r.text()}')
 
 
-client.run(TOKEN)
+bot.run(TOKEN)
